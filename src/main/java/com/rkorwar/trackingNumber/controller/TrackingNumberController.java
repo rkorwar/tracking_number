@@ -2,16 +2,22 @@ package com.rkorwar.trackingNumber.controller;
 
 import com.rkorwar.trackingNumber.model.TrackingNumberResponse;
 import com.rkorwar.trackingNumber.service.TrackingNumberService;
+import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @AllArgsConstructor
@@ -53,5 +59,52 @@ public class TrackingNumberController {
         String createdAt = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
 
         return ResponseEntity.ok(new TrackingNumberResponse(trackingNumber, createdAt));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("status", HttpStatus.BAD_REQUEST.value());
+        response.put("error", "Bad Request");
+
+        // Get the first error message (or the first violation)
+        FieldError fieldError = (FieldError) ex.getBindingResult().getAllErrors().get(0);
+        response.put("message", fieldError.getDefaultMessage());
+        response.put("path", "/next-tracking-number");
+
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<Map<String, Object>> handleMissingParams(MissingServletRequestParameterException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("status", HttpStatus.BAD_REQUEST.value());
+        response.put("error", "Bad Request");
+        response.put("message", "Required parameter '" + ex.getParameterName() + "' is not present.");
+        response.put("path", "/next-tracking-number");
+
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("status", HttpStatus.BAD_REQUEST.value());
+        response.put("error", "Bad Request");
+
+        // Iterate through all violations and add them to the response
+        ex.getConstraintViolations().forEach(violation -> {
+            String message = violation.getMessage();
+            response.put("message", message); // You can also collect all messages or choose the first one
+        });
+
+        response.put("path", "/next-tracking-number");
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 }
