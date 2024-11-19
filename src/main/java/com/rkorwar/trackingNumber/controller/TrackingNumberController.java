@@ -19,6 +19,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
+@Tag(
+        name = "Tracking Number API",
+        description = "API to manage Tracking Number"
+)
 @RestController
 @AllArgsConstructor
 @Validated
@@ -27,6 +31,19 @@ public class TrackingNumberController {
     private TrackingNumberService trackingNumberService;
 
     @GetMapping("/next-tracking-number")
+    @Operation(
+            summary = "Generate Next Tracking Number",
+            description = "The API generates the next tracking number based on the provided request parameters.",
+            parameters = {
+                    @Parameter(name = "origin_country_id", description = "Origin country code (ISO 3166-1 alpha-2 format)", required = true),
+                    @Parameter(name = "destination_country_id", description = "Destination country code (ISO 3166-1 alpha-2 format)", required = true),
+                    @Parameter(name = "weight", description = "Weight of the shipment (positive number, up to 3 decimals)", required = true),
+                    @Parameter(name = "created_at", description = "Timestamp of the shipment creation (RFC 3339 format)", required = true),
+                    @Parameter(name = "customer_id", description = "Unique customer identifier (UUID format)", required = true),
+                    @Parameter(name = "customer_name", description = "Customer's name", required = true),
+                    @Parameter(name = "customer_slug", description = "The customer’s name in slug-case/kebab-case (ex: redbox-logistics)", required = true)
+            }
+    )
     public ResponseEntity<?> getNextTrackingNumber(
             @RequestParam @NotNull(message = "origin_country_id is a required parameter")
             @Pattern(regexp = "^[A-Z]{2}$", message = "Invalid origin_country_id format. Must be ISO 3166-1 alpha-2 format.")
